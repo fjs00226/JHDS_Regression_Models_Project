@@ -1,0 +1,72 @@
+---
+title: "markdown"
+author: "Ji"
+date: "2022-10-20"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Regression Models Course Project
+### Introduction   
+This project is an analysis of the **mtcars** data.The goal is to answer two questions:      
+1. Is an automatic or manual transmission better for MPG?      
+2. Quantify the MPG difference between automatic and manual transmissions.   
+### Read the data
+mtcars is in the "datasets" package. It has 32 observation on 11 variables. The unit of mpg is miles/US gallon. Several parameters can affect mpg, including number of cylinders (cyl), displacement (disp),
+gross horsepower (hp), rear axle ratio (drat), weight (wt), 1/4 mile time (qsec), engine (vs), transmission (am), number of forward gears (gear), number of carburetors (carb).These parameters may have positive or negative correlation with mpg.
+```{r}
+data(mtcars)
+str(mtcars)
+```
+### Is an automatic or manual transmission better for MPG? 
+```{}
+length(which(mtcars$am==0))
+```
+There are 19 samples where am = 0, and 13 samples where am = 1. Since the population standard deviation is unknown, a t-test is used to verify the difference between automatic and manual transmission. The **null** hypothesis is that automatic and manual transmission has the **same** mpg.
+
+```{r}
+t.test(mpg ~ am, mtcars)
+```
+Here group 0 and 1 are automatic and manual transmission. The mean of manual transmission is larger than that of automatic transmission. The p-value is 0.001374, smaller than 0.05. So we should reject null hypothesis. The difference is significant.
+
+### Quantify the MPG difference between automatic and manual transmissions
+A linear regression should be figured out to answer this question. We need to find the best fit. Fit mpg ~ am and mpg ~ all parameters and compare their R-squared.
+```{r}
+fit_1<-lm(mpg ~ am, mtcars)
+fit_all<-lm(mpg ~ ., mtcars)
+summary(fit_1)
+summary(fit_all)
+```
+When using am as the single regressor, the R-squared is 0.3598, meaning that the fitting is not very good. Adding all parameters increases the R-squared to 0.869. However, there might be some regressors that are correlated to am. These regressors may cause variance inflation.
+Use **step** function to find the best fitting. **Step** selects a model by different criteria in a stepwise algorithm. The default criteria is AIC, which find the most likelihood fitting with the least number of regressors.
+```{r}
+fit_s <- step(fit_all, direction = "backward", trace = FALSE)
+summary(fit_s)
+confint(fit_s, "am")
+```
+This fitting gives R-squared = 0.8497, which is comparable with fitting all regressors. The slope negative for wt and positive for qsec, in agreement with common understanding. The Pr for wt, qsec and am are smaller than 0.05, meaning that the regressors are necessary. The coefficient of am is 2.9358, meaning that changing transmission from automatic to manual will cause 2.9358 mpg increase for a fixed wt and qsec. The 95% confidence interval is (0.04,5.82).
+
+### Plot fit_s
+```{r}
+par(mfrow=c(2,2))
+plot(fit_s,which=1)
+plot(fit_s,which=2)
+plot(fit_s,which=3)
+plot(fit_s,which=5)
+```
+Residuals vs Fitted shows residuals around 0. There are some outliers at 15 and 28.    
+Normal Q-Q shows almost normal distribution of the residuals.    
+The Scale-location is almost horizontal, the spread around the red line does not vary much with the fitted values.    
+All the points lies within the cook's distance, meaning that they are not influential. So we don't need to remove points.    
+
+
+### Conclusion    
+1. Manual transmission has a higher mpg than automatic transmission.    
+2. The mpg is linearly determined by am, wt and qsec. The mpg difference is 2.9358 between manual transmission and automatic transmission when wt and qsec is fixed.The 95% confidence interval is (0.04,5.82)     
+
